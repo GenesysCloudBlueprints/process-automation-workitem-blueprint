@@ -1,0 +1,221 @@
+workitem:
+  name: {{workitemflow_name}}
+  description: ""
+  division: {{division}}
+  startUpRef: "/workitem/states/state[Initial State_10]"
+  worktype:
+    name: {{worktype_name}}
+  defaultLanguage: {{default_language}}
+  supportedLanguages:
+    en-us:
+      defaultLanguageSkill:
+        noValue: true
+  settingsErrorHandling:
+    errorHandling:
+      endFlow:
+        none: true
+  states:
+    - state:
+        name: Initial State
+        refId: Initial State_10
+        actions:
+          - decision:
+              name: Workitem Created?
+              condition:
+                exp: Workitem.EventType == "workitemCreated"
+              outputs:
+                "yes":
+                  actions:
+                    - callTask:
+                        name: Call workitemCreated Task
+                        targetTaskRef: "/workitem/tasks/task[EventType - workitemCreated_12]"
+          - decision:
+              name: Workitem Status Changed?
+              condition:
+                exp: Workitem.EventType == "workitemStatusChanged"
+              outputs:
+                "yes":
+                  actions:
+                    - switch:
+                        name: Check Workitem Status
+                        evaluate:
+                          firstMatch:
+                            string:
+                              value:
+                                exp: Workitem.Workitem.status.name
+                              cases:
+                                - case:
+                                    value:
+                                      lit: Open
+                                    actions:
+                                      - callTask:
+                                          name: Status - Open
+                                          targetTaskRef: "/workitem/tasks/task[Status - Open_16]"
+                                - case:
+                                    value:
+                                      lit: Analyze Claim
+                                    actions:
+                                      - callTask:
+                                          name: Status - Analyze Claim
+                                          targetTaskRef: "/workitem/tasks/task[Status - Analyze Claim_18]"
+                                - case:
+                                    value:
+                                      lit: Gather Information
+                                    actions:
+                                      - callTask:
+                                          name: Status - Gather Information
+                                          targetTaskRef: "/workitem/tasks/task[Status - Gather Information_20]"
+                                - case:
+                                    value:
+                                      lit: Verify Information
+                                    actions:
+                                      - callTask:
+                                          name: Status - Verify Information
+                                          targetTaskRef: "/workitem/tasks/task[Status - Verify Information_22]"
+                                - case:
+                                    value:
+                                      lit: Approved
+                                    actions:
+                                      - callTask:
+                                          name: Status - Approved
+                                          targetTaskRef: "/workitem/tasks/task[Status - Approved_24]"
+                                - case:
+                                    value:
+                                      lit: Rejected
+                                    actions:
+                                      - callTask:
+                                          name: Status - Rejected
+                                          targetTaskRef: "/workitem/tasks/task[Status - Rejected_26]"
+          - exitWorkitemFlow:
+              name: Exit Workitem Flow
+  tasks:
+    - task:
+        name: EventType - workitemCreated
+        refId: EventType - workitemCreated_12
+        actions:
+          - endTask:
+              name: "End Task: workitemCreated"
+              outputPath:
+                name: default
+    - task:
+        name: Status - Open
+        refId: Status - Open_16
+        actions:
+          - endTask:
+              name: "End Task: Open"
+              outputPath:
+                name: default
+    - task:
+        name: Status - Analyze Claim
+        refId: Status - Analyze Claim_18
+        variables:
+          - stringVariable:
+              name: Task.AnalyzeString
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+        actions:
+          - disconnectWorkitem:
+              name: Disconnect Workitem
+              failureOutputs:
+                errorType:
+                  noValue: true
+                errorMessage:
+                  noValue: true
+          - updateData:
+              name: Add your logic here before assigning to an agent
+              statements:
+                - string:
+                    variable: Task.AnalyzeString
+                    value:
+                      lit: Some text
+          - transferToAcd:
+              name: Transfer to ACD
+              targetQueue:
+                lit:
+                  name: {{customer_service_queue_name}}
+              priority:
+                lit: 0
+              preferredAgents:
+                noValue: true
+              languageSkill:
+                noValue: true
+              failureOutputs:
+                errorType:
+                  noValue: true
+                errorMessage:
+                  noValue: true
+          - endTask:
+              name: "End Task: Analyze Claim"
+              outputPath:
+                name: default
+    - task:
+        name: Status - Gather Information
+        refId: Status - Gather Information_20
+        variables:
+          - stringVariable:
+              name: Task.GatherString
+              initialValue:
+                noValue: true
+              isInput: false
+              isOutput: false
+        actions:
+          - disconnectWorkitem:
+              name: Disconnect Workitem
+              failureOutputs:
+                errorType:
+                  noValue: true
+                errorMessage:
+                  noValue: true
+          - updateData:
+              name: Add your logic here before it makes a callback via routing back to queue
+              statements:
+                - string:
+                    variable: Task.GatherString
+                    value:
+                      lit: Some text
+          - transferToAcd:
+              name: Transfer to ACD
+              targetQueue:
+                lit:
+                  name: {{insurance_claim_queue_name}}
+              priority:
+                lit: 0
+              preferredAgents:
+                noValue: true
+              languageSkill:
+                noValue: true
+              failureOutputs:
+                errorType:
+                  noValue: true
+                errorMessage:
+                  noValue: true
+          - endTask:
+              name: "End Task: Gather Information"
+              outputPath:
+                name: default
+    - task:
+        name: Status - Verify Information
+        refId: Status - Verify Information_22
+        actions:
+          - endTask:
+              name: "End Task: Verify Information"
+              outputPath:
+                name: default
+    - task:
+        name: Status - Approved
+        refId: Status - Approved_24
+        actions:
+          - endTask:
+              name: "End Task: Approved"
+              outputPath:
+                name: default
+    - task:
+        name: Status - Rejected
+        refId: Status - Rejected_26
+        actions:
+          - endTask:
+              name: "End Task: Rejected"
+              outputPath:
+                name: default
